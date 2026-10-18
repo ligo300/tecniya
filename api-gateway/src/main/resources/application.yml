@@ -4,6 +4,47 @@ server:
 spring:
   application:
     name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - "http://localhost:4200"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders: "*"
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/api/auth/**
+            - id: tecnicos-service
+              uri: lb://tecnicos-service
+              predicates:
+                - Path=/api/tecnicos/**
+            - id: solicitudes-service
+              uri: lb://solicitudes-service
+              predicates:
+                - Path=/api/solicitudes/**, /api/ofertas/**
+            - id: ordenes-service
+              uri: lb://ordenes-service
+              predicates:
+                - Path=/api/ordenes/**
+            - id: notificaciones-service
+              uri: lb://notificaciones-service
+              predicates:
+                - Path=/api/notificaciones/**
+            - id: auditoria-service
+              uri: lb://auditoria-service
+              predicates:
+                - Path=/api/auditoria/**
 
 eureka:
   client:
