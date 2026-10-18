@@ -2,12 +2,14 @@ package pe.tecniya.solicitudes;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = "eureka.client.enabled=false")
+@SpringBootTest
+@ActiveProfiles("test")
 class SolicitudesServiceApplicationTests {
 
     @Test
     void contextLoads() {
-        // Verifica que el contexto de Spring arranca sin errores.
+        // Verifica que el contexto de Spring arranca con R2DBC (H2 en memoria).
     }
 }
