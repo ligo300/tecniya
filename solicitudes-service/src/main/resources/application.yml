@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: solicitudes-service
+  r2dbc:
+    url: ${DB_URL:r2dbc:postgresql://localhost:5432/solicitudes_db}
+    username: ${DB_USER:tecniya}
+    password: ${DB_PASSWORD:tecniya123}
+  sql:
+    init:
+      mode: always
 
 eureka:
   client:
@@ -15,3 +22,9 @@ management:
     web:
       exposure:
         include: health,info
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:cambia-esta-clave-por-una-de-al-menos-32-caracteres}
+  tecnicos:
+    url: ${TECNICOS_URL:http://tecnicos-service}
