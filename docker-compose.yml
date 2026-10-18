@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: tecniya-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tecniya}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tecniya123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tecniya}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: tecniya-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-tecniya}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-tecniya123}
+    ports:
+      - "5672:5672"     # AMQP
+      - "15672:15672"   # Consola web: http://localhost:15672
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  pgdata:
