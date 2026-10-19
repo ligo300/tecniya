@@ -28,3 +28,7 @@ app:
     secret: ${JWT_SECRET:cambia-esta-clave-por-una-de-al-menos-32-caracteres}
   tecnicos:
     url: ${TECNICOS_URL:http://tecnicos-service}
+  ordenes:
+    url: ${ORDENES_URL:http://ordenes-service}
+  internal:
+    key: ${INTERNAL_KEY:clave-interna-de-desarrollo}
