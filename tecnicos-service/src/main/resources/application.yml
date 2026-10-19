@@ -2,6 +2,19 @@ server:
   port: 8082
 
 spring:
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:tecniya}
+    password: ${RABBIT_PASSWORD:tecniya123}
+    connection-timeout: 3s
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
   application:
     name: tecnicos-service
   r2dbc:
@@ -26,3 +39,5 @@ management:
 app:
   jwt:
     secret: ${JWT_SECRET:cambia-esta-clave-por-una-de-al-menos-32-caracteres}
+  eventos:
+    habilitado: ${EVENTOS_HABILITADOS:true}

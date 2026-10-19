@@ -1,4 +1,8 @@
 spring:
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
   r2dbc:
     url: r2dbc:h2:mem:///tecnicosdb?options=DB_CLOSE_DELAY=-1
     username: sa
@@ -11,3 +15,5 @@ eureka:
 app:
   jwt:
     secret: clave-de-pruebas-que-supera-los-32-caracteres
+  eventos:
+    habilitado: false

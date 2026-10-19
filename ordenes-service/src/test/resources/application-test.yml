@@ -15,3 +15,5 @@ app:
     key: clave-interna-de-pruebas
   uploads:
     dir: ${java.io.tmpdir}/tecniya-pruebas-ordenes
+  eventos:
+    habilitado: false

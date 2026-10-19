@@ -33,6 +33,7 @@ import io.jsonwebtoken.security.Keys;
 import pe.tecniya.ordenes.client.TecnicoInfo;
 import pe.tecniya.ordenes.client.TecnicosClient;
 import pe.tecniya.ordenes.dto.FotoResponse;
+import pe.tecniya.ordenes.eventos.EventoPublisherEnMemoria;
 import pe.tecniya.ordenes.dto.OrdenDetalleResponse;
 import pe.tecniya.ordenes.dto.OrdenResponse;
 import pe.tecniya.ordenes.exception.RecursoNoEncontradoException;
@@ -60,6 +61,10 @@ class OrdenApiTests {
     @Autowired
     private CalificacionRepository calificaciones;
 
+    /** Sin RabbitMQ en las pruebas: los eventos quedan en memoria. */
+    @Autowired
+    private EventoPublisherEnMemoria eventos;
+
     /** tecnicos-service se simula: aquí no se llama a ningún otro servicio. */
     @MockitoBean
     private TecnicosClient tecnicosClient;
@@ -73,6 +78,7 @@ class OrdenApiTests {
 
     @BeforeEach
     void limpiar() {
+        eventos.limpiar();
         calificaciones.deleteAll()
                 .then(pagos.deleteAll())
                 .then(fotos.deleteAll())
@@ -219,6 +225,7 @@ class OrdenApiTests {
         assertEquals("CONTRATADO", primera.estado().name());
         assertEquals("OFERTA", primera.origen().name());
         assertEquals(1L, ordenes.count().block());
+        assertEquals(List.of("orden.creada"), eventos.claves());
     }
 
     @Test
@@ -315,6 +322,17 @@ class OrdenApiTests {
         assertEquals(1, d.pagos().size());
         assertNotNull(d.calificacion());
         assertEquals(5, d.calificacion().puntaje());
+
+        // RN-16 y RN-20: cada hito publica su evento, en este orden
+        assertEquals(List.of("orden.creada",
+                "orden.estado.cambiado", "orden.estado.cambiado",
+                "orden.estado.cambiado", "orden.estado.cambiado",
+                "pago.registrado", "orden.estado.cambiado", "orden.calificada"),
+                eventos.claves());
+        EventoPublisherEnMemoria.Publicado ultimo = eventos.publicados().get(7);
+        assertEquals("OrdenCalificada", ultimo.evento().tipo());
+        assertEquals(100, ((Number) ultimo.evento().datos().get("tecnicoId")).intValue());
+        assertEquals(5, ((Number) ultimo.evento().datos().get("puntaje")).intValue());
     }
 
     // ---------- Reglas de estado y fotos ----------
