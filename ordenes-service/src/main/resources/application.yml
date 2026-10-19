@@ -2,6 +2,12 @@ server:
   port: 8084
 
 spring:
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:tecniya}
+    password: ${RABBIT_PASSWORD:tecniya123}
+    connection-timeout: 3s
   application:
     name: ordenes-service
   r2dbc:
@@ -32,3 +38,5 @@ app:
     key: ${INTERNAL_KEY:clave-interna-de-desarrollo}
   uploads:
     dir: ${UPLOADS_DIR:uploads}
+  eventos:
+    habilitado: ${EVENTOS_HABILITADOS:true}

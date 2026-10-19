@@ -1,6 +1,7 @@
 package pe.tecniya.solicitudes.service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import pe.tecniya.solicitudes.domain.Oferta;
 import pe.tecniya.solicitudes.domain.Solicitud;
 import pe.tecniya.solicitudes.dto.OfertaRequest;
 import pe.tecniya.solicitudes.dto.OfertaResponse;
+import pe.tecniya.solicitudes.eventos.EventoPublisher;
 import pe.tecniya.solicitudes.exception.AccesoDenegadoException;
 import pe.tecniya.solicitudes.exception.ConflictoException;
 import pe.tecniya.solicitudes.exception.RecursoNoEncontradoException;
@@ -31,13 +33,16 @@ public class OfertaService {
     private final OfertaRepository ofertas;
     private final TecnicosClient tecnicosClient;
     private final OrdenesClient ordenesClient;
+    private final EventoPublisher eventos;
 
     public OfertaService(SolicitudRepository solicitudes, OfertaRepository ofertas,
-                         TecnicosClient tecnicosClient, OrdenesClient ordenesClient) {
+                         TecnicosClient tecnicosClient, OrdenesClient ordenesClient,
+                         EventoPublisher eventos) {
         this.solicitudes = solicitudes;
         this.ofertas = ofertas;
         this.tecnicosClient = tecnicosClient;
         this.ordenesClient = ordenesClient;
+        this.eventos = eventos;
     }
 
     /** RN-06 y RN-07: ofertan técnicos ACTIVO con la especialidad, una sola vez. */
@@ -139,6 +144,12 @@ public class OfertaService {
                                     .then(solicitudes.save(s))
                                     .then(rechazarPendientes(s.getId(), o.getId()))
                                     .then(ordenesClient.crearOrdenDesdeOferta(s, o))
+                                    .then(eventos.publicar("oferta.aceptada", "OfertaAceptada", Map.of(
+                                            "solicitudId", s.getId(),
+                                            "ofertaId", o.getId(),
+                                            "clienteId", s.getClienteId(),
+                                            "tecnicoId", o.getTecnicoId(),
+                                            "precio", o.getPrecio())))
                                     .thenReturn(o);
                         }))
                 .map(OfertaResponse::de);

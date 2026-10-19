@@ -11,3 +11,5 @@ eureka:
 app:
   jwt:
     secret: clave-de-pruebas-que-supera-los-32-caracteres
+  eventos:
+    habilitado: false

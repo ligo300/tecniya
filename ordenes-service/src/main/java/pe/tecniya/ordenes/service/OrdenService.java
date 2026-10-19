@@ -1,6 +1,7 @@
 package pe.tecniya.ordenes.service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ import pe.tecniya.ordenes.dto.OrdenDirectaRequest;
 import pe.tecniya.ordenes.dto.OrdenInternaRequest;
 import pe.tecniya.ordenes.dto.OrdenResponse;
 import pe.tecniya.ordenes.dto.PagoResponse;
+import pe.tecniya.ordenes.eventos.EventoPublisher;
 import pe.tecniya.ordenes.exception.ReglaNegocioException;
 import pe.tecniya.ordenes.repository.CalificacionRepository;
 import pe.tecniya.ordenes.repository.FotoRepository;
@@ -41,11 +43,13 @@ public class OrdenService {
     private final CalificacionRepository calificaciones;
     private final TecnicosClient tecnicosClient;
     private final AccesoOrden acceso;
+    private final EventoPublisher eventos;
 
     public OrdenService(OrdenRepository ordenes, HistorialRepository historial,
                         FotoRepository fotos, PagoRepository pagos,
                         CalificacionRepository calificaciones,
-                        TecnicosClient tecnicosClient, AccesoOrden acceso) {
+                        TecnicosClient tecnicosClient, AccesoOrden acceso,
+                        EventoPublisher eventos) {
         this.ordenes = ordenes;
         this.historial = historial;
         this.fotos = fotos;
@@ -53,6 +57,7 @@ public class OrdenService {
         this.calificaciones = calificaciones;
         this.tecnicosClient = tecnicosClient;
         this.acceso = acceso;
+        this.eventos = eventos;
     }
 
     /** Siguiente estado del flujo normal, o null si la orden ya terminó. */
@@ -123,7 +128,15 @@ public class OrdenService {
 
     private Mono<Orden> guardarNueva(Orden o, Long usuarioId) {
         return ordenes.save(o).flatMap(g -> registrar(g.getId(), null,
-                EstadoOrden.CONTRATADO, usuarioId).thenReturn(g));
+                EstadoOrden.CONTRATADO, usuarioId)
+                .then(eventos.publicar("orden.creada", "OrdenCreada", Map.of(
+                        "ordenId", g.getId(),
+                        "codigo", g.getCodigo(),
+                        "clienteId", g.getClienteId(),
+                        "tecnicoId", g.getTecnicoId(),
+                        "origen", g.getOrigen().name(),
+                        "precio", g.getPrecioAcordado())))
+                .thenReturn(g));
     }
 
     private Mono<OrdenHistorial> registrar(Long ordenId, EstadoOrden anterior,
@@ -192,7 +205,10 @@ public class OrdenService {
                 o.setEstado(nuevo);
                 o.setActualizadoEn(LocalDateTime.now());
                 return ordenes.save(o).flatMap(g ->
-                        registrar(g.getId(), anterior, nuevo, usuario.id()).thenReturn(g));
+                        registrar(g.getId(), anterior, nuevo, usuario.id())
+                                .then(eventos.publicar("orden.estado.cambiado", "OrdenCambioEstado",
+                                        datosCambio(g, anterior, nuevo, usuario.id())))
+                                .thenReturn(g));
             }));
         }).map(OrdenResponse::de);
     }
@@ -230,7 +246,21 @@ public class OrdenService {
             o.setActualizadoEn(LocalDateTime.now());
             return ordenes.save(o).flatMap(g ->
                     registrar(g.getId(), anterior, EstadoOrden.CANCELADO, usuario.id())
+                            .then(eventos.publicar("orden.estado.cambiado", "OrdenCambioEstado",
+                                    datosCambio(g, anterior, EstadoOrden.CANCELADO, usuario.id())))
                             .thenReturn(g));
         }).map(OrdenResponse::de);
+    }
+
+    private Map<String, Object> datosCambio(Orden o, EstadoOrden anterior, EstadoOrden nuevo,
+                                            Long usuarioId) {
+        return Map.of(
+                "ordenId", o.getId(),
+                "codigo", o.getCodigo(),
+                "clienteId", o.getClienteId(),
+                "tecnicoId", o.getTecnicoId(),
+                "estadoAnterior", anterior.name(),
+                "estadoNuevo", nuevo.name(),
+                "usuarioId", usuarioId);
     }
 }

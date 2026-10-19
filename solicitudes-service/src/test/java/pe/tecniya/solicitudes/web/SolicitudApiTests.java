@@ -31,6 +31,7 @@ import pe.tecniya.solicitudes.client.OrdenesClient;
 import pe.tecniya.solicitudes.client.TecnicoInfo;
 import pe.tecniya.solicitudes.client.TecnicosClient;
 import pe.tecniya.solicitudes.dto.OfertaResponse;
+import pe.tecniya.solicitudes.eventos.EventoPublisherEnMemoria;
 import pe.tecniya.solicitudes.dto.SolicitudResponse;
 import pe.tecniya.solicitudes.exception.ReglaNegocioException;
 import pe.tecniya.solicitudes.repository.OfertaRepository;
@@ -50,6 +51,10 @@ class SolicitudApiTests {
     @Autowired
     private OfertaRepository ofertas;
 
+    /** Sin RabbitMQ en las pruebas: los eventos quedan en memoria. */
+    @Autowired
+    private EventoPublisherEnMemoria eventos;
+
     /** tecnicos-service se simula: aquí no se llama a ningún otro servicio. */
     @MockitoBean
     private TecnicosClient tecnicosClient;
@@ -63,6 +68,7 @@ class SolicitudApiTests {
 
     @BeforeEach
     void limpiar() {
+        eventos.limpiar();
         when(ordenesClient.crearOrdenDesdeOferta(any(), any())).thenReturn(Mono.empty());
         ofertas.deleteAll().then(solicitudes.deleteAll()).block();
     }
@@ -390,6 +396,7 @@ class SolicitudApiTests {
                 .expectBody().jsonPath("$.estado").isEqualTo("ACEPTADA");
 
         verify(ordenesClient, times(1)).crearOrdenDesdeOferta(any(), any());
+        assertEquals(List.of("oferta.aceptada"), eventos.claves());
         assertEquals("ADJUDICADA", verSolicitud(s.id(), 1).estado().name());
         List<OfertaResponse> lista = verOfertas(s.id(), 1);
         assertEquals("ACEPTADA", lista.get(0).estado().name());

@@ -1,6 +1,7 @@
 package pe.tecniya.ordenes.service;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import pe.tecniya.ordenes.domain.EstadoPago;
 import pe.tecniya.ordenes.domain.Pago;
 import pe.tecniya.ordenes.dto.PagoRequest;
 import pe.tecniya.ordenes.dto.PagoResponse;
+import pe.tecniya.ordenes.eventos.EventoPublisher;
 import pe.tecniya.ordenes.exception.ConflictoException;
 import pe.tecniya.ordenes.exception.ReglaNegocioException;
 import pe.tecniya.ordenes.repository.PagoRepository;
@@ -22,10 +24,12 @@ public class PagoService {
 
     private final PagoRepository pagos;
     private final AccesoOrden acceso;
+    private final EventoPublisher eventos;
 
-    public PagoService(PagoRepository pagos, AccesoOrden acceso) {
+    public PagoService(PagoRepository pagos, AccesoOrden acceso, EventoPublisher eventos) {
         this.pagos = pagos;
         this.acceso = acceso;
+        this.eventos = eventos;
     }
 
     @Transactional
@@ -61,7 +65,16 @@ public class PagoService {
                                             .startsWith("RECHAZO")
                                             ? EstadoPago.RECHAZADO : EstadoPago.PAGADO);
                                     p.setFecha(LocalDateTime.now());
-                                    return pagos.save(p);
+                                    return pagos.save(p).flatMap(g -> eventos
+                                            .publicar("pago.registrado", "PagoRegistrado", Map.of(
+                                                    "ordenId", o.getId(),
+                                                    "codigo", o.getCodigo(),
+                                                    "clienteId", o.getClienteId(),
+                                                    "tecnicoId", o.getTecnicoId(),
+                                                    "monto", g.getMonto(),
+                                                    "medio", g.getMedio().name(),
+                                                    "estado", g.getEstado().name()))
+                                            .thenReturn(g));
                                 });
                     });
         }).map(PagoResponse::de);

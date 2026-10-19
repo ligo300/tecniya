@@ -1,8 +1,10 @@
 package pe.tecniya.tecnicos.service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,7 @@ import pe.tecniya.tecnicos.domain.TipoEquipo;
 import pe.tecniya.tecnicos.dto.TecnicoDetalleResponse;
 import pe.tecniya.tecnicos.dto.TecnicoRequest;
 import pe.tecniya.tecnicos.dto.TecnicoResponse;
+import pe.tecniya.tecnicos.eventos.EventoPublisher;
 import pe.tecniya.tecnicos.exception.AccesoDenegadoException;
 import pe.tecniya.tecnicos.exception.ConflictoException;
 import pe.tecniya.tecnicos.exception.RecursoNoEncontradoException;
@@ -28,10 +31,13 @@ public class TecnicoService {
 
     private final TecnicoRepository tecnicos;
     private final EspecialidadRepository especialidades;
+    private final EventoPublisher eventos;
 
-    public TecnicoService(TecnicoRepository tecnicos, EspecialidadRepository especialidades) {
+    public TecnicoService(TecnicoRepository tecnicos, EspecialidadRepository especialidades,
+                          EventoPublisher eventos) {
         this.tecnicos = tecnicos;
         this.especialidades = especialidades;
+        this.eventos = eventos;
     }
 
     // ---------- Consultas ----------
@@ -83,6 +89,12 @@ public class TecnicoService {
                 .flatMap(guardado -> especialidades
                         .reemplazar(guardado.getId(), datos.especialidades())
                         .thenReturn(guardado))
+                .flatMap(guardado -> eventos
+                        .publicar("tecnico.registrado", "TecnicoRegistrado", Map.of(
+                                "tecnicoId", guardado.getId(),
+                                "usuarioId", guardado.getUsuarioId(),
+                                "nombre", guardado.getNombres() + " " + guardado.getApellidos()))
+                        .thenReturn(guardado))
                 .flatMap(this::aDetalle);
     }
 
@@ -117,9 +129,31 @@ public class TecnicoService {
                                 "No se puede pasar de " + t.getEstado() + " a " + nuevo));
                     }
                     t.setEstado(nuevo);
-                    return tecnicos.save(t);
+                    return tecnicos.save(t).flatMap(guardado -> nuevo == EstadoTecnico.ACTIVO
+                            ? eventos.publicar("tecnico.activado", "TecnicoActivado", Map.of(
+                                    "tecnicoId", guardado.getId(),
+                                    "usuarioId", guardado.getUsuarioId()))
+                                    .thenReturn(guardado)
+                            : Mono.just(guardado));
                 })
                 .flatMap(this::aDetalle);
+    }
+
+    /** RN-20: recalcula el promedio y la cantidad al llegar el evento OrdenCalificada. */
+    @Transactional
+    public Mono<Void> registrarCalificacion(Long tecnicoId, int puntaje) {
+        return tecnicos.findById(tecnicoId)
+                .flatMap(t -> {
+                    BigDecimal total = t.getCalifPromedio()
+                            .multiply(BigDecimal.valueOf(t.getCalifCantidad()))
+                            .add(BigDecimal.valueOf(puntaje));
+                    int cantidad = t.getCalifCantidad() + 1;
+                    t.setCalifPromedio(total.divide(BigDecimal.valueOf(cantidad), 2,
+                            RoundingMode.HALF_UP));
+                    t.setCalifCantidad(cantidad);
+                    return tecnicos.save(t);
+                })
+                .then();
     }
 
     @Transactional
