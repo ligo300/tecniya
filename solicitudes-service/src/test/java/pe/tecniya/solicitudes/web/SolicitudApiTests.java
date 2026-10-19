@@ -2,6 +2,9 @@ package pe.tecniya.solicitudes.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
@@ -24,6 +27,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import pe.tecniya.solicitudes.client.OrdenesClient;
 import pe.tecniya.solicitudes.client.TecnicoInfo;
 import pe.tecniya.solicitudes.client.TecnicosClient;
 import pe.tecniya.solicitudes.dto.OfertaResponse;
@@ -50,11 +54,16 @@ class SolicitudApiTests {
     @MockitoBean
     private TecnicosClient tecnicosClient;
 
+    /** ordenes-service también se simula; se comprueba que se le pida crear la orden. */
+    @MockitoBean
+    private OrdenesClient ordenesClient;
+
     @Value("${app.jwt.secret}")
     private String secreto;
 
     @BeforeEach
     void limpiar() {
+        when(ordenesClient.crearOrdenDesdeOferta(any(), any())).thenReturn(Mono.empty());
         ofertas.deleteAll().then(solicitudes.deleteAll()).block();
     }
 
@@ -380,6 +389,7 @@ class SolicitudApiTests {
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.estado").isEqualTo("ACEPTADA");
 
+        verify(ordenesClient, times(1)).crearOrdenDesdeOferta(any(), any());
         assertEquals("ADJUDICADA", verSolicitud(s.id(), 1).estado().name());
         List<OfertaResponse> lista = verOfertas(s.id(), 1);
         assertEquals("ACEPTADA", lista.get(0).estado().name());
