@@ -76,3 +76,29 @@ Spring Boot 3.5.16 y Spring Cloud 2025.0.3 (compatibles entre sí), Java 21, Mav
 - [ ] 13. Angular: parte del cliente
 - [ ] 14. CI completo y evidencias
 - [ ] 15. Documentación y sustentación
+
+## Pruebas
+
+```bash
+./mvnw -B verify
+```
+
+Ejecuta todas las pruebas con H2 en memoria (no necesitan Docker) y genera el reporte de cobertura de JaCoCo en `<servicio>/target/site/jacoco/index.html`. El CI de GitHub Actions hace lo mismo y guarda los reportes como artefactos.
+
+| Tipo | Qué comprueba | Ejemplos |
+|---|---|---|
+| Capa de datos | Insertar, actualizar, eliminar y listar en los repositorios, más restricciones únicas y cascadas | `UsuarioRepositoryTests`, `OrdenRepositoryTests` |
+| Unitarias (Mockito) | Reglas de negocio sin Spring ni base de datos | `PagoServiceTests`, `OrdenServiceTests`, `JwtServiceTests` |
+| API | Cada endpoint con roles, validaciones y errores | `OrdenApiTests`, `SolicitudApiTests` |
+| Eventos | Publicación y consumo de eventos sin RabbitMQ | `EventoConsumidorTests`, `EventosTecnicoTests` |
+| Gateway | Una ruta por servicio hacia su nombre en Eureka | `RutasGatewayTests` |
+
+### Prueba de punta a punta
+
+Con `docker compose up -d` y los 8 servicios arriba:
+
+```bash
+bash scripts/e2e.sh
+```
+
+Recorre el flujo completo por el Gateway: registro, validación del técnico, solicitud, oferta, orden con fotos, pago, entrega, calificación, notificaciones y auditoría.

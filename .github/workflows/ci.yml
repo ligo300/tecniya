@@ -34,3 +34,11 @@ jobs:
           name: reportes-surefire
           path: "**/target/surefire-reports/"
           if-no-files-found: ignore
+
+      - name: Guardar reportes de cobertura (JaCoCo)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-jacoco
+          path: "**/target/site/jacoco/"
+          if-no-files-found: ignore
