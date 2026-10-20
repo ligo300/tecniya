@@ -50,7 +50,7 @@ export class AuthService {
     switch (this.usuario()?.rol) {
       case 'TECNICO': return '/panel';
       case 'ADMIN': return '/admin';
-      default: return '/';
+      default: return '/solicitudes';
     }
   }
 

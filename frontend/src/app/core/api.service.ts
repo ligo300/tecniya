@@ -1,7 +1,8 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
-  EstadoOrden, EstadoTecnico, Orden, OrdenDetalle, Foto, Tecnico, TecnicoDetalle,
+  Calificacion, EstadoOrden, EstadoTecnico, MedioPago, Notificacion, Oferta, OfertaRequest,
+  Orden, OrdenDetalle, Foto, Pago, Solicitud, SolicitudRequest, Tecnico, TecnicoDetalle,
   TecnicoRequest, TipoEquipo,
 } from './models';
 
@@ -55,4 +56,32 @@ export class ApiService {
   descargarFoto(f: Pick<Foto, 'ordenId' | 'id'>) {
     return this.http.get(`/api/ordenes/${f.ordenId}/fotos/${f.id}`, { responseType: 'blob' });
   }
+
+  contratarDirecto(d: { tecnicoId: number; tipoEquipo: TipoEquipo; descripcion: string }) {
+    return this.http.post<Orden>('/api/ordenes/directa', d);
+  }
+  pagar(id: number, d: { monto: number; medio: MedioPago; nroOperacion: string }) {
+    return this.http.post<Pago>(`/api/ordenes/${id}/pago`, d);
+  }
+  calificar(id: number, d: { puntaje: number; comentario: string }) {
+    return this.http.post<Calificacion>(`/api/ordenes/${id}/calificacion`, d);
+  }
+
+  // ---- solicitudes y ofertas ----
+  solicitudes() { return this.http.get<Solicitud[]>('/api/solicitudes'); }
+  solicitud(id: number) { return this.http.get<Solicitud>(`/api/solicitudes/${id}`); }
+  crearSolicitud(d: SolicitudRequest) { return this.http.post<Solicitud>('/api/solicitudes', d); }
+  cancelarSolicitud(id: number) { return this.http.delete<void>(`/api/solicitudes/${id}`); }
+  ofertas(solicitudId: number) { return this.http.get<Oferta[]>(`/api/solicitudes/${solicitudId}/ofertas`); }
+  ofertar(solicitudId: number, d: OfertaRequest) {
+    return this.http.post<Oferta>(`/api/solicitudes/${solicitudId}/ofertas`, d);
+  }
+  aceptarOferta(id: number) { return this.http.post<Oferta>(`/api/ofertas/${id}/aceptar`, {}); }
+
+  // ---- notificaciones ----
+  notificaciones(soloNoLeidas = false) {
+    const params = new HttpParams().set('soloNoLeidas', soloNoLeidas);
+    return this.http.get<Notificacion[]>('/api/notificaciones', { params });
+  }
+  marcarLeida(id: number) { return this.http.put<Notificacion>(`/api/notificaciones/${id}/leida`, {}); }
 }

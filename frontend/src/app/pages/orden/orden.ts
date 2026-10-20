@@ -1,10 +1,11 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { mensajeError } from '../../core/errores';
-import { EstadoOrden, FLUJO, OrdenDetalle, etiquetaEstado, siguienteEstado } from '../../core/models';
+import { EstadoOrden, FLUJO, MEDIOS_PAGO, MedioPago, OrdenDetalle, etiquetaEstado, siguienteEstado } from '../../core/models';
 import { FotoImg } from '../../shared/foto-img';
 import { Traza } from '../../shared/traza';
 
@@ -12,10 +13,10 @@ const MAX_BYTES = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-orden',
-  imports: [RouterLink, DatePipe, CurrencyPipe, Traza, FotoImg],
+  imports: [RouterLink, ReactiveFormsModule, DatePipe, CurrencyPipe, Traza, FotoImg],
   template: `
     <div class="contenedor pagina">
-      <a [routerLink]="auth.rutaInicio()" class="volver">← Volver</a>
+      <a [routerLink]="esTecnico() ? '/panel' : '/mis-ordenes'" class="volver">← Volver</a>
 
       @if (error()) { <div class="aviso error" role="alert">{{ error() }}</div> }
       @if (ok()) { <div class="aviso ok" role="status">{{ ok() }}</div> }
@@ -62,7 +63,57 @@ const MAX_BYTES = 5 * 1024 * 1024;
           </section>
         }
 
-        @if (esTecnico() && puedeCancelar()) {
+        @if (esCliente()) {
+          @if (d.orden.estado === 'LISTO' && !pagado()) {
+            <section class="accion">
+              <h2>Tu equipo está listo: paga para recibirlo</h2>
+              <p class="suave">Pago simulado, no se cobra dinero real. Un número de operación que empiece con RECHAZO simula un pago rechazado.</p>
+              <form class="formulario" [formGroup]="formPago" (ngSubmit)="pagar(d.orden.id)" novalidate>
+                <div class="campo">
+                  <label for="monto">Monto (S/)</label>
+                  <input id="monto" type="number" step="0.01" min="0.01" formControlName="monto" inputmode="decimal" />
+                  @if (formPago.controls.monto.invalid && formPago.controls.monto.touched) { <span class="error-campo">El monto debe ser mayor a cero.</span> }
+                </div>
+                <div class="campo">
+                  <label for="medio">Medio de pago</label>
+                  <select id="medio" formControlName="medio">
+                    @for (m of medios; track m) { <option [value]="m">{{ m }}</option> }
+                  </select>
+                </div>
+                <div class="campo">
+                  <label for="nro">Número de operación</label>
+                  <input id="nro" formControlName="nroOperacion" maxlength="40" />
+                  @if (formPago.controls.nroOperacion.invalid && formPago.controls.nroOperacion.touched) { <span class="error-campo">Escribe el número de operación.</span> }
+                </div>
+                <button class="btn cobre" type="submit" [disabled]="avanzando()">{{ avanzando() ? 'Pagando…' : 'Pagar' }}</button>
+              </form>
+            </section>
+          } @else if (d.orden.estado === 'LISTO' && pagado()) {
+            <div class="aviso ok">Pago confirmado. El técnico ya puede entregarte el equipo.</div>
+          }
+          @if (d.orden.estado === 'ENTREGADO' && !d.calificacion) {
+            <section class="accion">
+              <h2>Califica al técnico</h2>
+              <form class="formulario" [formGroup]="formCalif" (ngSubmit)="calificar(d.orden.id)" novalidate>
+                <fieldset class="campo">
+                  <legend>Puntaje</legend>
+                  <div class="opciones">
+                    @for (n of [1, 2, 3, 4, 5]; track n) {
+                      <label class="opcion"><input type="radio" [value]="n" formControlName="puntaje" /> {{ n }}</label>
+                    }
+                  </div>
+                </fieldset>
+                <div class="campo">
+                  <label for="comentario">Comentario (opcional)</label>
+                  <textarea id="comentario" rows="3" formControlName="comentario" maxlength="300"></textarea>
+                </div>
+                <button class="btn cobre" type="submit" [disabled]="avanzando()">{{ avanzando() ? 'Enviando…' : 'Enviar calificación' }}</button>
+              </form>
+            </section>
+          }
+        }
+
+        @if (puedeCancelar()) {
           <button class="btn peligro chico" type="button" [disabled]="avanzando()" (click)="cancelar()">Cancelar orden</button>
         }
 
@@ -131,6 +182,18 @@ export class OrdenPagina {
   readonly etiqueta = etiquetaEstado;
 
   readonly esTecnico = computed(() => this.auth.tieneRol('TECNICO'));
+  readonly esCliente = computed(() => this.auth.tieneRol('CLIENTE'));
+  readonly medios = MEDIOS_PAGO;
+  private readonly fb = inject(FormBuilder);
+  readonly formPago = this.fb.nonNullable.group({
+    monto: [0, [Validators.required, Validators.min(0.01)]],
+    medio: ['YAPE' as MedioPago],
+    nroOperacion: ['', [Validators.required, Validators.maxLength(40)]],
+  });
+  readonly formCalif = this.fb.nonNullable.group({
+    puntaje: [5, [Validators.required, Validators.min(1), Validators.max(5)]],
+    comentario: ['', [Validators.maxLength(300)]],
+  });
   readonly siguiente = computed(() => {
     const e = this.detalle()?.orden.estado;
     return e ? siguienteEstado(e) : null;
@@ -138,7 +201,9 @@ export class OrdenPagina {
   readonly pagado = computed(() => !!this.detalle()?.pagos.some((p) => p.estado === 'PAGADO'));
   readonly puedeCancelar = computed(() => {
     const e = this.detalle()?.orden.estado;
-    return !!e && FLUJO.indexOf(e) >= 0 && FLUJO.indexOf(e) <= FLUJO.indexOf('EN_REPARACION');
+    if (!e || FLUJO.indexOf(e) < 0) { return false; }
+    if (this.esCliente()) { return e === 'CONTRATADO'; }
+    return this.esTecnico() && FLUJO.indexOf(e) <= FLUJO.indexOf('EN_REPARACION');
   });
   readonly fotosPorEstado = computed(() => {
     const fotos = this.detalle()?.fotos ?? [];
@@ -156,7 +221,13 @@ export class OrdenPagina {
 
   private cargar(id: number): void {
     this.api.orden(id).subscribe({
-      next: (d) => { this.detalle.set(d); this.error.set(''); },
+      next: (d) => {
+        this.detalle.set(d);
+        this.error.set('');
+        if (!this.formPago.controls.monto.dirty) {
+          this.formPago.controls.monto.setValue(d.orden.precioAcordado ?? 0);
+        }
+      },
       error: (e) => this.error.set(mensajeError(e)),
     });
   }
@@ -207,6 +278,38 @@ export class OrdenPagina {
         this.ok.set(`La orden pasó a ${etiquetaEstado(estado)}.`);
         this.cargar(d.orden.id);
       },
+      error: (e) => { this.avanzando.set(false); this.error.set(mensajeError(e)); },
+    });
+  }
+
+  pagar(id: number): void {
+    this.formPago.markAllAsTouched();
+    if (this.formPago.invalid) { return; }
+    this.avanzando.set(true);
+    this.error.set('');
+    this.ok.set('');
+    this.api.pagar(id, this.formPago.getRawValue()).subscribe({
+      next: (p) => {
+        this.avanzando.set(false);
+        if (p.estado === 'PAGADO') {
+          this.ok.set('Pago confirmado.');
+        } else {
+          this.error.set('El pago fue rechazado. Revisa el número de operación e inténtalo de nuevo.');
+        }
+        this.formPago.controls.nroOperacion.reset('');
+        this.cargar(id);
+      },
+      error: (e) => { this.avanzando.set(false); this.error.set(mensajeError(e)); },
+    });
+  }
+
+  calificar(id: number): void {
+    if (this.formCalif.invalid) { return; }
+    this.avanzando.set(true);
+    this.error.set('');
+    this.ok.set('');
+    this.api.calificar(id, this.formCalif.getRawValue()).subscribe({
+      next: () => { this.avanzando.set(false); this.ok.set('Gracias por calificar.'); this.cargar(id); },
       error: (e) => { this.avanzando.set(false); this.error.set(mensajeError(e)); },
     });
   }
