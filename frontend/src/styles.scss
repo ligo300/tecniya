@@ -1,0 +1,117 @@
+/* TecniYa — paleta de banco de trabajo: placa verde, soldadura, cobre y amarillo de multímetro. */
+:root {
+  --placa: #0f3d30;
+  --placa-2: #17543f;
+  --soldadura: #e9eeea;
+  --papel: #f7f8f5;
+  --tinta: #121a16;
+  --tinta-suave: #4b5a52;
+  --linea: #cfd8d2;
+  --cobre: #b8651f;
+  --cobre-oscuro: #8f4a12;
+  --multimetro: #f2c230;
+  --error: #a3271f;
+  --error-fondo: #fbe9e6;
+  --ok: #1f6b3a;
+  --ok-fondo: #e3f3e8;
+  --aviso-fondo: #fff4d1;
+  --radio: 6px;
+  --display: 'Bricolage Grotesque', 'Segoe UI', sans-serif;
+  --texto: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color-scheme: light; }
+
+body {
+  margin: 0;
+  background: var(--papel);
+  color: var(--tinta);
+  font-family: var(--texto);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0 0 .6rem; letter-spacing: -.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 800; }
+h2 { font-size: 1.5rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0 0 1rem; max-width: 62ch; }
+a { color: var(--cobre-oscuro); }
+
+:focus-visible { outline: 3px solid var(--multimetro); outline-offset: 2px; }
+
+.contenedor { width: min(1080px, 100% - 32px); margin-inline: auto; }
+.pagina { padding-block: 2rem 4rem; }
+.suave { color: var(--tinta-suave); }
+.pequeno { font-size: .875rem; }
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* botones */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  min-height: 44px; padding: .55rem 1.1rem; border-radius: var(--radio);
+  border: 2px solid var(--placa); background: var(--placa); color: #fff;
+  font: 600 1rem var(--texto); cursor: pointer; text-decoration: none;
+  transition: background .15s, color .15s;
+}
+.btn:hover:not(:disabled) { background: var(--placa-2); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.cobre { background: var(--cobre); border-color: var(--cobre); }
+.btn.cobre:hover:not(:disabled) { background: var(--cobre-oscuro); border-color: var(--cobre-oscuro); }
+.btn.borde { background: transparent; color: var(--placa); }
+.btn.borde:hover:not(:disabled) { background: var(--soldadura); }
+.btn.peligro { background: transparent; color: var(--error); border-color: var(--error); }
+.btn.peligro:hover:not(:disabled) { background: var(--error-fondo); }
+.btn.chico { min-height: 36px; padding: .3rem .8rem; font-size: .9rem; }
+
+/* formularios */
+.formulario { display: grid; gap: 1rem; max-width: 520px; }
+.formulario.ancho { max-width: 760px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.formulario.ancho .completo { grid-column: 1 / -1; }
+.campo { display: grid; gap: .3rem; }
+.campo label, .campo legend { font-weight: 600; font-size: .95rem; }
+.campo input, .campo select, .campo textarea {
+  min-height: 44px; padding: .5rem .7rem; border: 2px solid var(--linea);
+  border-radius: var(--radio); background: #fff; font: inherit; color: inherit;
+}
+.campo input:focus, .campo select:focus { border-color: var(--placa); outline: none; box-shadow: 0 0 0 3px var(--multimetro); }
+.campo .error-campo { color: var(--error); font-size: .85rem; }
+fieldset.campo { border: 0; padding: 0; margin: 0; }
+.opciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.opcion {
+  display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; padding: .3rem .8rem;
+  border: 2px solid var(--linea); border-radius: var(--radio); background: #fff; cursor: pointer; font-weight: 500;
+}
+.opcion:has(input:checked) { border-color: var(--placa); background: var(--soldadura); }
+.opcion input { accent-color: var(--placa); width: 18px; height: 18px; }
+
+/* avisos */
+.aviso { padding: .8rem 1rem; border-radius: var(--radio); border-left: 5px solid var(--cobre); background: var(--aviso-fondo); margin-bottom: 1rem; max-width: 62ch; }
+.aviso.error { border-color: var(--error); background: var(--error-fondo); color: var(--error); }
+.aviso.ok { border-color: var(--ok); background: var(--ok-fondo); color: var(--ok); }
+
+/* etiquetas */
+.chip { display: inline-block; padding: .1rem .55rem; border-radius: 999px; background: var(--soldadura); border: 1px solid var(--linea); font-size: .8rem; font-weight: 600; }
+.chip.activo { background: var(--ok-fondo); border-color: var(--ok); color: var(--ok); }
+.chip.pendiente { background: var(--aviso-fondo); border-color: var(--cobre); color: var(--cobre-oscuro); }
+.chip.suspendido, .chip.cancelado { background: var(--error-fondo); border-color: var(--error); color: var(--error); }
+
+/* tabla */
+.tabla-caja { overflow-x: auto; border: 1px solid var(--linea); border-radius: var(--radio); background: #fff; }
+table.tabla { width: 100%; border-collapse: collapse; }
+.tabla th, .tabla td { padding: .7rem .9rem; text-align: left; border-bottom: 1px solid var(--linea); vertical-align: middle; }
+.tabla th { font-size: .85rem; color: var(--tinta-suave); font-weight: 600; background: var(--soldadura); }
+.tabla tr:last-child td { border-bottom: 0; }
+
+.vacio { padding: 2rem 1rem; border: 2px dashed var(--linea); border-radius: var(--radio); background: #fff; }
+.vacio h3 { margin-bottom: .3rem; }
+
+@media (max-width: 640px) {
+  .formulario.ancho { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
