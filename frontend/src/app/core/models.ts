@@ -131,3 +131,64 @@ const ETIQUETAS: Record<string, string> = {
 export function etiquetaEstado(e: EstadoOrden | EstadoTecnico): string {
   return ETIQUETAS[e] ?? e;
 }
+
+// ---- solicitudes y ofertas (paso 13) ----
+export type EstadoSolicitud = 'ABIERTA' | 'CON_OFERTAS' | 'ADJUDICADA' | 'CANCELADA';
+export type EstadoOferta = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
+export type MedioPago = 'EFECTIVO' | 'YAPE' | 'PLIN' | 'TARJETA';
+
+export const MEDIOS_PAGO: MedioPago[] = ['YAPE', 'PLIN', 'TARJETA', 'EFECTIVO'];
+
+export interface Solicitud {
+  id: number;
+  clienteId: number;
+  tipoEquipo: TipoEquipo;
+  marcaModelo: string;
+  descripcionFalla: string;
+  presupuestoRef: number;
+  estado: EstadoSolicitud;
+  creadoEn: string;
+}
+
+export interface SolicitudRequest {
+  tipoEquipo: TipoEquipo;
+  marcaModelo: string;
+  descripcionFalla: string;
+  presupuestoRef: number;
+}
+
+export interface Oferta {
+  id: number;
+  solicitudId: number;
+  tecnicoId: number;
+  precio: number;
+  plazoDias: number;
+  mensaje: string | null;
+  estado: EstadoOferta;
+  creadoEn: string;
+}
+
+export interface OfertaRequest {
+  precio: number;
+  plazoDias: number;
+  mensaje: string;
+}
+
+export interface Notificacion {
+  id: number;
+  evento: string;
+  mensaje: string;
+  leida: boolean;
+  creadaEn: string;
+}
+
+const ETIQUETAS_SOLICITUD: Record<EstadoSolicitud, string> = {
+  ABIERTA: 'Abierta',
+  CON_OFERTAS: 'Con ofertas',
+  ADJUDICADA: 'Adjudicada',
+  CANCELADA: 'Cancelada',
+};
+
+export function etiquetaSolicitud(e: EstadoSolicitud): string {
+  return ETIQUETAS_SOLICITUD[e] ?? e;
+}

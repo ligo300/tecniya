@@ -31,7 +31,11 @@ import { Estrellas } from '../../shared/estrellas';
           <p>Para contratar a {{ t.nombres }} necesitas una cuenta de cliente.</p>
           <a class="btn cobre" routerLink="/login" [queryParams]="{ volver: '/tecnicos/' + t.id }">Ingresar para contratar</a>
         } @else if (auth.tieneRol('CLIENTE')) {
-          <div class="aviso">La contratación desde esta pantalla se habilita en la próxima entrega.</div>
+          <p>Contrata a {{ t.nombres }} directo por su tarifa base, o publica una solicitud para comparar ofertas.</p>
+          <div class="acciones">
+            <a class="btn cobre" [routerLink]="['/contratar', t.id]">Contratar a {{ t.nombres }}</a>
+            <a class="btn borde" routerLink="/solicitudes/nueva">Publicar una solicitud</a>
+          </div>
         }
       }
     </div>
@@ -43,6 +47,7 @@ import { Estrellas } from '../../shared/estrellas';
     .datos div { display: grid; grid-template-columns: 9rem 1fr; align-items: center; gap: .5rem; }
     dt { color: var(--tinta-suave); font-weight: 600; }
     dd { margin: 0; display: flex; flex-wrap: wrap; gap: .3rem; }
+    .acciones { display: flex; flex-wrap: wrap; gap: .6rem; }
     .precio { font: 800 1.6rem var(--display); }
   `,
 })

@@ -15,7 +15,7 @@ npm run build        # compila a dist/tecniya-web
 
 En desarrollo el archivo `proxy.conf.json` redirige `/api/*` al Gateway, así no hay problemas de CORS.
 
-## Pantallas (paso 12)
+## Pantallas (pasos 12 y 13)
 | Ruta | Quién | Qué hace |
 |---|---|---|
 | `/` | Público | Catálogo de técnicos con filtros (equipo, zona, calificación) |
@@ -24,6 +24,12 @@ En desarrollo el archivo `proxy.conf.json` redirige `/api/*` al Gateway, así no
 | `/panel` | TECNICO | Crear/editar perfil y ver sus órdenes |
 | `/ordenes/:id` | Con sesión | Línea de avance, fotos por etapa, subir foto y cambiar estado |
 | `/admin` | ADMIN | Activar o suspender técnicos |
+| `/solicitudes`, `/solicitudes/nueva` | CLIENTE | Publicar una solicitud y ver las propias |
+| `/solicitudes/:id` | CLIENTE | Comparar ofertas por precio, aceptar una o cancelar |
+| `/contratar/:id` | CLIENTE | Contratación directa por la tarifa base del técnico |
+| `/mis-ordenes` | CLIENTE | Lista de órdenes; en `/ordenes/:id` paga y califica |
+| `/abiertas` | TECNICO | Solicitudes abiertas de sus equipos y envío de ofertas |
+| `/notificaciones` | Con sesión | Avisos de solicitudes, órdenes y pagos |
 
 ## Estructura
 - `src/app/core`: modelos, `AuthService` (JWT), interceptor, guards, `ApiService`
